@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace GameDevTV.RTS.Player{
 public class PlayerInput : MonoBehaviour
 {
-    [SerializeField] private Transform cameraTarget;
+    [SerializeField] private Rigidbody cameraTarget;
     [SerializeField] private CinemachineCamera cinemachineCamera;
 
     [SerializeField] CameraConfig cameraConfig;
@@ -89,7 +89,7 @@ private void HandlePanning()
         input.y * cameraConfig.KeyboardForwardPanSpeed + mouseMove.y);
 
     move = Quaternion.Euler(0f, yaw, 0f) * move;
-    cameraTarget.position += move * Time.deltaTime;
+    cameraTarget.linearVelocity = move;
 }
 
  private void ApplyFollowOffset()
