@@ -4090,6 +4090,9 @@ MonoBehaviour:
   selectableUnitsLayers:
     serializedVersion: 2
     m_Bits: 192
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 256
   camera: {fileID: 330585545}
   cameraConfig:
     <EnableEdgePan>k__BackingField: 1
@@ -17132,7 +17135,7 @@ GameObject:
   - component: {fileID: 1387778862}
   - component: {fileID: 1387778861}
   - component: {fileID: 1387778860}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Water
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -24970,7 +24973,7 @@ GameObject:
   - component: {fileID: 1933012997}
   - component: {fileID: 1933012996}
   - component: {fileID: 1933012995}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
