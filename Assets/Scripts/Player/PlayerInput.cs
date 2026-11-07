@@ -1,3 +1,4 @@
+using GameDevTV.RTS.Units;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,8 +9,11 @@ public class PlayerInput : MonoBehaviour
 {
     [SerializeField] private Rigidbody cameraTarget;
     [SerializeField] private CinemachineCamera cinemachineCamera;
+    [SerializeField] LayerMask selectableUnitsLayers;
+    [SerializeField] private new Camera camera;
 
     [SerializeField] CameraConfig cameraConfig;
+    ISelectable selectedUnit;
 
     private RTSControls controls;
     private CinemachineFollow cinemachineFollow;
@@ -23,7 +27,10 @@ public class PlayerInput : MonoBehaviour
     private void Awake()
     {
         controls = new RTSControls();
-
+        if(camera == null)
+            {
+                camera = Camera.main;
+            }
         if (cinemachineCamera == null)
         {
             cinemachineCamera = FindFirstObjectByType<CinemachineCamera>();
@@ -57,8 +64,41 @@ public class PlayerInput : MonoBehaviour
         HandleRotation();
         HandleZooming();
         HandlePanning();
+        HandleLeftClick();
         ApplyFollowOffset();
     }
+void HandleLeftClick()
+{
+    if (camera == null) { return; }
+    if (!Mouse.current.leftButton.wasReleasedThisFrame) { return; }
+
+    Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+
+    if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue, selectableUnitsLayers)
+        && hit.collider.GetComponentInParent<ISelectable>() is ISelectable clicked)
+    {
+        // Clicked the already-selected unit: toggle it off
+        if (selectedUnit == clicked)
+        {
+            selectedUnit.Deselect();
+            selectedUnit = null;
+            return;
+        }
+
+        // Clicked a different unit: swap selection
+        selectedUnit?.Deselect();
+        clicked.Select();
+        selectedUnit = clicked;
+        return;
+    }
+
+    // Clicked nothing selectable: clear selection
+    if (selectedUnit != null)
+    {
+        selectedUnit.Deselect();
+        selectedUnit = null;
+    }
+}
 
     private void HandleRotation()
     {
