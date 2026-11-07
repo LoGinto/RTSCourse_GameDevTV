@@ -3,11 +3,15 @@ using UnityEngine.AI;
 
 namespace GameDevTV.RTS.Units{
 [RequireComponent(typeof(NavMeshAgent))]
-public class Worker : MonoBehaviour, ISelectable
+public class Worker : MonoBehaviour, ISelectable,IMovable
 {
-    [SerializeField] Transform target; 
     [SerializeField] GameObject decalProjector;
     NavMeshAgent agent;
+
+    void Awake()
+        {
+            agent = GetComponent<NavMeshAgent>();
+        }
 
         public void Deselect()
         {
@@ -15,22 +19,15 @@ public class Worker : MonoBehaviour, ISelectable
             decalProjector.SetActive(false);
         }
 
+        public void MoveTo(Vector3 position)
+        {
+            agent.SetDestination(position);
+        }
+
         public void Select()
         {
             Debug.Log($"{name} SELECT", this);
            decalProjector.SetActive(true);
-        }
-
-        void Awake()
-        {
-            agent = GetComponent<NavMeshAgent>();
-        }
-        void Update()
-        { 
-            if(target != null)
-            {
-                agent.SetDestination(target.position);
-            }
         }
     }
 }

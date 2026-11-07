@@ -9,7 +9,7 @@ public class PlayerInput : MonoBehaviour
 {
     [SerializeField] private Rigidbody cameraTarget;
     [SerializeField] private CinemachineCamera cinemachineCamera;
-    [SerializeField] LayerMask selectableUnitsLayers;
+    [SerializeField] LayerMask selectableUnitsLayers,groundLayer;
     [SerializeField] private new Camera camera;
 
     [SerializeField] CameraConfig cameraConfig;
@@ -65,7 +65,20 @@ public class PlayerInput : MonoBehaviour
         HandleZooming();
         HandlePanning();
         HandleLeftClick();
+        HandleRightClick();
         ApplyFollowOffset();
+    }
+
+    void HandleRightClick()
+    {
+        if(selectedUnit == null || selectedUnit is not IMovable movable){return;}
+        if (camera == null) { return; }
+        if (!Mouse.current.rightButton.wasReleasedThisFrame) { return; }
+        Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue,groundLayer))
+        {
+            movable.MoveTo(hit.point);
+        }
     }
 void HandleLeftClick()
 {
