@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using GameDevTV.RTS.EventBus;
 using GameDevTV.RTS.Events;
 using GameDevTV.RTS.Units;
 using Unity.Cinemachine;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,8 +19,9 @@ public class PlayerInput : MonoBehaviour
 
     [SerializeField] CameraConfig cameraConfig;
     [SerializeField] RectTransform selectionBox;
-    ISelectable selectedUnit;
-
+    List<ISelectable> selectedUnits = new(12);
+    HashSet<AbstractUnit> aliveUnits  = new (100);
+    HashSet<AbstractUnit> addedUnits = new(25);
     private RTSControls controls;
     private CinemachineFollow cinemachineFollow;
 
@@ -54,21 +57,23 @@ public class PlayerInput : MonoBehaviour
         startHeight = start.y;
         Bus<UnitSelectedEvent>.OnEvent += HandleUnitSelected;
         Bus<UnitDeselectedEvent>.OnEvent += HandleUnitDeselected;
+        Bus<UnitpSpawnedEvent>.OnEvent += HandleUnitSpawned;
     }
+
+        private void HandleUnitSpawned(UnitpSpawnedEvent evt)
+        {
+            aliveUnits.Add(evt.Unit);
+        }
 
         private void HandleUnitDeselected(UnitDeselectedEvent evt)
         {
-            selectedUnit = null;
+            selectedUnits.Remove(evt.Unit);
         }
 
         private void HandleUnitSelected(UnitSelectedEvent evt)
         {
             //handle selection
-             if (selectedUnit != null)
-            {
-                selectedUnit.Deselect();
-            }
-             selectedUnit = evt.Unit;
+            selectedUnits.Add(evt.Unit);
         }
 
         private void OnEnable()
@@ -84,6 +89,7 @@ public class PlayerInput : MonoBehaviour
         {
             Bus<UnitSelectedEvent>.OnEvent -= HandleUnitSelected;
             Bus<UnitDeselectedEvent>.OnEvent -= HandleUnitDeselected;
+            Bus<UnitpSpawnedEvent>.OnEvent  -= HandleUnitSpawned;
         }
 
         private void Update()
@@ -103,73 +109,120 @@ public class PlayerInput : MonoBehaviour
             {
                 //enable UI 
                 //store start position
-                selectionBox.gameObject.SetActive(true);
-                startingMousePosition = Mouse.current.position.ReadValue();
+                HandleMouseDown();
             }
             else if(Mouse.current.leftButton.isPressed && !Mouse.current.leftButton.wasPressedThisFrame)
             {
                 //resize selection box
-                ResizeSelectionBox();
+              HandleMouseDrag();
             }
             else if (Mouse.current.leftButton.wasReleasedThisFrame)
             {
-                //select new units
-                //deselect non-included units
-                //disable Ui
-                selectionBox.gameObject.SetActive(false);
+                HandleMouseUp();
             }
-    }
+        }
 
-        private void ResizeSelectionBox()
+        private void HandleMouseUp()
+        {
+            if (controls.Camera.MultiSelect.IsPressed())    
+            {
+                ShiftSelect();
+            }
+            else
+            {
+                DeselectAllUnits();
+                HandleLeftClick();
+                foreach (AbstractUnit unit in addedUnits)
+                {
+                    unit.Select();
+                }
+            }
+            selectionBox.gameObject.SetActive(false);
+        }
+
+        private void HandleMouseDrag()
+        {
+            Bounds selectionBoxBounds = ResizeSelectionBox();
+            foreach (AbstractUnit unit in aliveUnits)
+            {
+                Vector2 unitPosition = camera.WorldToScreenPoint(unit.transform.position);
+                if (selectionBoxBounds.Contains(unitPosition))
+                {
+                    addedUnits.Add(unit);
+                }
+            }
+        }
+
+        private void HandleMouseDown()
+        {
+            selectionBox.sizeDelta = Vector2.zero;
+            selectionBox.gameObject.SetActive(true);
+            startingMousePosition = Mouse.current.position.ReadValue();
+            addedUnits.Clear();
+        }
+
+        void ShiftSelect()
+        {
+             foreach (AbstractUnit unit in addedUnits)
+                {
+                    if (selectedUnits.Contains(unit))
+                        unit.Deselect();
+                    else
+                        unit.Select();
+                }
+        }
+    private void DeselectAllUnits()
+        {
+            ISelectable[] currentlySelectedUnits = selectedUnits.ToArray();
+            foreach(ISelectable selectable in currentlySelectedUnits)
+            {
+                selectable.Deselect();
+            }
+        }
+
+        private Bounds ResizeSelectionBox()
         {
             Vector2 mousePosition = Mouse.current.position.ReadValue();
             float width = mousePosition.x - startingMousePosition.x;
             float height = mousePosition.y - startingMousePosition.y;
             selectionBox.anchoredPosition = startingMousePosition + new Vector2(width / 2, height / 2);
             selectionBox.sizeDelta = new Vector2(Mathf.Abs(width), Mathf.Abs(height));
+            return new Bounds(selectionBox.anchoredPosition,selectionBox.sizeDelta);
         }
 
         void HandleRightClick()
     {
-        if(selectedUnit == null || selectedUnit is not IMovable movable){return;}
+        if(selectedUnits.Count == 0 ){return;}
         if (camera == null) { return; }
         if (!Mouse.current.rightButton.wasReleasedThisFrame) { return; }
         Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
         if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue,groundLayer))
         {
-            movable.MoveTo(hit.point);
+            foreach(ISelectable selectable in selectedUnits)
+                {
+                    if(selectable is IMovable movable){
+                        movable.MoveTo(hit.point);
+                    }
+                }
         }
     }
-void HandleLeftClick()
-{
-    if (camera == null) { return; }
-    if (!Mouse.current.leftButton.wasReleasedThisFrame) { return; }
-
-    Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
-
-    if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue, selectableUnitsLayers)
-        && hit.collider.GetComponentInParent<ISelectable>() is ISelectable clicked)
+    void HandleLeftClick()
     {
-        // Clicked the already-selected unit: toggle it off
-        if (selectedUnit == clicked)
+        if (camera == null) { return; }
+
+        // Big box means it was a drag, not a click
+        if (selectionBox.sizeDelta.sqrMagnitude > 100f) { return; }
+
+        Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue, selectableUnitsLayers))
         {
-            selectedUnit.Deselect();
-            return;
+            AbstractUnit unit = hit.collider.GetComponentInParent<AbstractUnit>();
+            if (unit != null)
+            {
+                addedUnits.Add(unit);
+            }
         }
-
-        // Clicked a different unit: swap selection
-        selectedUnit?.Deselect();
-        clicked.Select();
-        return;
     }
-
-    // Clicked nothing selectable: clear selection
-    if (selectedUnit != null)
-    {
-        selectedUnit.Deselect();
-        selectedUnit = null;
-    }
-}
 
     private void HandleRotation()
     {
