@@ -1,3 +1,6 @@
+using System;
+using GameDevTV.RTS.EventBus;
+using GameDevTV.RTS.Events;
 using GameDevTV.RTS.Units;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -13,12 +16,14 @@ public class PlayerInput : MonoBehaviour
     [SerializeField] private new Camera camera;
 
     [SerializeField] CameraConfig cameraConfig;
+    [SerializeField] RectTransform selectionBox;
     ISelectable selectedUnit;
 
     private RTSControls controls;
     private CinemachineFollow cinemachineFollow;
 
     private Vector3 startFlatOffset;
+    Vector2 startingMousePosition; 
     private float yaw;
     private float currentHeight;
     private float targetHeight;
@@ -47,9 +52,26 @@ public class PlayerInput : MonoBehaviour
         currentHeight = start.y;
         targetHeight = start.y;
         startHeight = start.y;
+        Bus<UnitSelectedEvent>.OnEvent += HandleUnitSelected;
+        Bus<UnitDeselectedEvent>.OnEvent += HandleUnitDeselected;
     }
 
-    private void OnEnable()
+        private void HandleUnitDeselected(UnitDeselectedEvent evt)
+        {
+            selectedUnit = null;
+        }
+
+        private void HandleUnitSelected(UnitSelectedEvent evt)
+        {
+            //handle selection
+             if (selectedUnit != null)
+            {
+                selectedUnit.Deselect();
+            }
+             selectedUnit = evt.Unit;
+        }
+
+        private void OnEnable()
     {
         controls.Camera.Enable();
     }
@@ -58,18 +80,56 @@ public class PlayerInput : MonoBehaviour
     {
         controls.Camera.Disable();
     }
+        void OnDestroy()
+        {
+            Bus<UnitSelectedEvent>.OnEvent -= HandleUnitSelected;
+            Bus<UnitDeselectedEvent>.OnEvent -= HandleUnitDeselected;
+        }
 
-    private void Update()
+        private void Update()
     {
         HandleRotation();
         HandleZooming();
         HandlePanning();
         HandleLeftClick();
         HandleRightClick();
+        HandleDragSelect();
         ApplyFollowOffset();
     }
+    void HandleDragSelect()
+    {
+            if(selectionBox == null){return;}
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                //enable UI 
+                //store start position
+                selectionBox.gameObject.SetActive(true);
+                startingMousePosition = Mouse.current.position.ReadValue();
+            }
+            else if(Mouse.current.leftButton.isPressed && !Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                //resize selection box
+                ResizeSelectionBox();
+            }
+            else if (Mouse.current.leftButton.wasReleasedThisFrame)
+            {
+                //select new units
+                //deselect non-included units
+                //disable Ui
+                selectionBox.gameObject.SetActive(false);
+            }
+    }
 
-    void HandleRightClick()
+        private void ResizeSelectionBox()
+        {
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            float width = mousePosition.x - startingMousePosition.x;
+            float height = mousePosition.y - startingMousePosition.y;
+            selectionBox.anchoredPosition = startingMousePosition + new Vector2(width / 2, height / 2);
+            selectionBox.sizeDelta = new Vector2(Mathf.Abs(width), Mathf.Abs(height));
+        }
+
+        void HandleRightClick()
     {
         if(selectedUnit == null || selectedUnit is not IMovable movable){return;}
         if (camera == null) { return; }
@@ -94,14 +154,12 @@ void HandleLeftClick()
         if (selectedUnit == clicked)
         {
             selectedUnit.Deselect();
-            selectedUnit = null;
             return;
         }
 
         // Clicked a different unit: swap selection
         selectedUnit?.Deselect();
         clicked.Select();
-        selectedUnit = clicked;
         return;
     }
 
