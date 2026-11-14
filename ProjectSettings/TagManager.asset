@@ -8,7 +8,7 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - AirUnitLayer
   - Water
   - UI
   - Units
