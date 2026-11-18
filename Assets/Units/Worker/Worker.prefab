@@ -149,7 +149,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c95f24be335e1c76aa6bcb4610865713, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 0}
+  <CurrentHealth>k__BackingField: 0
+  <MaxHealth>k__BackingField: 0
+  UnitSo: {fileID: 11400000, guid: 88f0bf891f29b5ec982d932317dd14a2, type: 2}
   decalProjector: {fileID: 3815917993286348440}
 --- !u!136 &7654171305504052586
 CapsuleCollider:

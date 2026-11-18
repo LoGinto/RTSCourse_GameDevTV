@@ -1,0 +1,11 @@
+using UnityEngine;
+
+
+namespace GameDevTV.RTS.Units{
+    [CreateAssetMenu(fileName ="Unit",menuName ="Units/Unit")]
+    public class UnitySO : ScriptableObject
+    {
+        [field: SerializeField] public int Health { get; private set; } = 100;
+        
+    }
+}

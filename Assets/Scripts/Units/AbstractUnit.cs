@@ -7,9 +7,9 @@ namespace GameDevTV.RTS.Units
 {
     [RequireComponent(typeof(NavMeshAgent))]
 
-    public abstract class AbstractUnit : MonoBehaviour, ISelectable, IMovable
+    public abstract class AbstractUnit : AbstractCommandable,IMovable
     {
-        [SerializeField] GameObject decalProjector;
+        
         NavMeshAgent agent;
         public float AgentRadius => agent.radius;
         
@@ -18,28 +18,17 @@ namespace GameDevTV.RTS.Units
         {
             agent = GetComponent<NavMeshAgent>();
         }
-        void Start()
+        protected override void Start()
         {
+            base.Start();
             Bus<UnitpSpawnedEvent>.Raise(new UnitpSpawnedEvent(this));//uses abstract unit
         }
 
-        public void Deselect()
-        {
-           //Debug.Log($"{name} DESELECT, decal active after = {decalProjector.activeSelf}", this);
-            decalProjector.SetActive(false);
-           Bus<UnitDeselectedEvent>.Raise(new UnitDeselectedEvent(this));
-        }
+        
 
         public void MoveTo(Vector3 position)
         {
             agent.SetDestination(position);
-        }
-
-        public void Select()
-        {
-           // Debug.Log($"{name} SELECT", this);
-           decalProjector.SetActive(true);
-           Bus<UnitSelectedEvent>.Raise(new UnitSelectedEvent(this));
         }
     }
 }

@@ -19,7 +19,7 @@ public class PlayerInput : MonoBehaviour
     [SerializeField] RectTransform selectionBox;
     List<ISelectable> selectedUnits = new(12);
     HashSet<AbstractUnit> aliveUnits  = new (100);
-    HashSet<AbstractUnit> addedUnits = new(25);
+    HashSet<ISelectable> addedUnits = new(25);
     private RTSControls controls;
     private CinemachineFollow cinemachineFollow;
 
@@ -120,23 +120,23 @@ public class PlayerInput : MonoBehaviour
             }
         }
 
-        private void HandleMouseUp()
+       private void HandleMouseUp()
+{
+    if (controls.Camera.MultiSelect.IsPressed())
+    {
+        ShiftSelect();
+    }
+    else
+    {
+        DeselectAllUnits();
+        HandleLeftClick();
+        foreach (ISelectable unit in addedUnits)
         {
-            if (controls.Camera.MultiSelect.IsPressed())    
-            {
-                ShiftSelect();
-            }
-            else
-            {
-                DeselectAllUnits();
-                HandleLeftClick();
-                foreach (AbstractUnit unit in addedUnits)
-                {
-                    unit.Select();
-                }
-            }
-            selectionBox.gameObject.SetActive(false);
+            unit.Select();
         }
+    }
+    selectionBox.gameObject.SetActive(false);
+}
 
         private void HandleMouseDrag()
         {
@@ -160,15 +160,15 @@ public class PlayerInput : MonoBehaviour
         }
 
         void ShiftSelect()
-        {
-             foreach (AbstractUnit unit in addedUnits)
-                {
-                    if (selectedUnits.Contains(unit))
-                        unit.Deselect();
-                    else
-                        unit.Select();
-                }
-        }
+{
+    foreach (ISelectable unit in addedUnits)
+    {
+        if (selectedUnits.Contains(unit))
+            unit.Deselect();
+        else
+            unit.Select();
+    }
+}
     private void DeselectAllUnits()
         {
             ISelectable[] currentlySelectedUnits = selectedUnits.ToArray();
@@ -243,10 +243,10 @@ public class PlayerInput : MonoBehaviour
         Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
         if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue, selectableUnitsLayers))
         {
-            AbstractUnit unit = hit.collider.GetComponentInParent<AbstractUnit>();
-            if (unit != null)
+            ISelectable selectable = hit.collider.GetComponentInParent<ISelectable>();
+            if (selectable != null)
             {
-                addedUnits.Add(unit);
+                addedUnits.Add(selectable);
             }
         }
     }
