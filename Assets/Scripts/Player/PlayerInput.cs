@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using GameDevTV.RTS.EventBus;
 using GameDevTV.RTS.Events;
 using GameDevTV.RTS.Units;
+using GameDevTV.RTS.Commands;
+//using Unity.Android.Gradle.Manifest;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -196,6 +198,7 @@ public class PlayerInput : MonoBehaviour
         Ray cameraRay = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
         if (Physics.Raycast(cameraRay, out RaycastHit hit, float.MaxValue,groundLayer))
         {
+          
             List<AbstractUnit> abstractUnits = new List<AbstractUnit>(selectedUnits.Count);
             foreach(ISelectable selectable in selectedUnits)
                 {
@@ -204,33 +207,19 @@ public class PlayerInput : MonoBehaviour
                         abstractUnits.Add(unit);
                     }
                 }
-            int unitsOnLayer = 0;
-            int maxUnitsOnLayer = 1;
-            float circleRadius = 0;
-            float radialOffset = 0;
-            foreach(AbstractUnit unit in abstractUnits)
+
+            for(int i = 0;i<abstractUnits.Count;i++)
                 {
-                    Vector3 targetPosition = new Vector3(
-                        hit.point.x + circleRadius*Mathf.Cos(radialOffset * unitsOnLayer), 
-                        hit.point.y,
-                        hit.point.z + circleRadius * Mathf.Sin(radialOffset * unitsOnLayer)
-                    );
-                    unit.MoveTo(targetPosition);
-                    unitsOnLayer++;
-                    if (unitsOnLayer >= maxUnitsOnLayer)
+                    CommandContext commandContext = new CommandContext(abstractUnits[i],hit,i);
+                    foreach(ICommand command in abstractUnits[i].AvailableCommands)
                     {
-                        unitsOnLayer = 0;
-                        circleRadius  += unit.AgentRadius * 3.5f;
-                        maxUnitsOnLayer = Mathf.FloorToInt(2*Mathf.PI*circleRadius/(unit.AgentRadius * 2));
-                        radialOffset = 2*Mathf.PI / maxUnitsOnLayer;
+                        if(command.CanHandle(commandContext)){
+                            command.Handle(commandContext);
+                            break;
+                        }
                     }
+                 
                 }
-            // foreach(ISelectable selectable in selectedUnits)
-            //     {
-            //         if(selectable is IMovable movable){
-            //             movable.MoveTo(hit.point);
-            //         }
-            //     }
         }
     }
     void HandleLeftClick()

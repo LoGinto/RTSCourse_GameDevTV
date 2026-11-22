@@ -1,12 +1,14 @@
 using UnityEngine;
 using GameDevTV.RTS.EventBus;
 using GameDevTV.RTS.Events;
+using GameDevTV.RTS.Commands;
 
 namespace GameDevTV.RTS.Units{
     public class AbstractCommandable : MonoBehaviour, ISelectable
     {
         [field: SerializeField] public int CurrentHealth { get; private set; }
         [field: SerializeField] public int MaxHealth { get; private set; }
+        [field: SerializeField] public ActionBase[] AvailableCommands {get;private set;}
         [SerializeField] private UnitySO UnitSo;
         [SerializeField] GameObject decalProjector;
 
